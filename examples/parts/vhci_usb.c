@@ -262,8 +262,7 @@ handle_ep0_control(
 				res=0;
 			}
 	}
-	else
-    {
+	else {
 		res = control_write(p,ep0,
 			urb->bmRequestType,
 			urb->bRequest,
@@ -273,12 +272,10 @@ handle_ep0_control(
 			urb->buffer);
     }
 
-	if (res==AVR_IOCTL_USB_STALL)
-    {
+	if (res==AVR_IOCTL_USB_STALL) {
 		urb->status = USB_VHCI_STATUS_STALL;
     }
-	else
-    {
+	else {
 		urb->status = USB_VHCI_STATUS_SUCCESS;
     }
 }
@@ -339,38 +336,25 @@ vhci_usb_thread(
 		switch (wrk.type) {
 			case USB_VHCI_WORK_TYPE_PORT_STAT:
                 {
-                uint16_t status, change;
-                uint8_t flags, index;
-
-                status = wrk.work.port_stat.status;
-                change = wrk.work.port_stat.change;
-                flags = wrk.work.port_stat.flags;
-                index = wrk.work.port_stat.index;
-
-                printf("got port stat work\n");
-                printf("status: 0x%04hx\n", status);
-                printf("change: 0x%04hx\n", change);
-                printf("flags:  0x%02hhx\n", flags);
-
-				handle_status_change(p, &port_status, &wrk.work.port_stat);
+                    handle_status_change(p, &port_status, &wrk.work.port_stat);
                 }
 				break;
 
 			case USB_VHCI_WORK_TYPE_PROCESS_URB:
-				printf("got process urb work\n");
-
-				if (!ep0.epsz)
+				if (!ep0.epsz) {
 					ep0.epsz = get_ep0_size(p);
+                }
 
 				wrk.work.urb.buffer = NULL;
 				wrk.work.urb.iso_packets = NULL;
 
-				if (wrk.work.urb.buffer_length)
+				if (wrk.work.urb.buffer_length) {
 					wrk.work.urb.buffer = malloc(wrk.work.urb.buffer_length);
-				if (wrk.work.urb.packet_count)
+                }
+				if (wrk.work.urb.packet_count) {
 					wrk.work.urb.iso_packets = malloc(
-					        wrk.work.urb.packet_count
-					                * sizeof(struct usb_vhci_iso_packet));
+					        wrk.work.urb.packet_count * sizeof(struct usb_vhci_iso_packet));
+                }
 				if (res) {
 					if (usb_vhci_fetch_data(p->fd, &wrk.work.urb) < 0) {
 						if (errno != ECANCELED)
@@ -385,7 +369,8 @@ vhci_usb_thread(
 				if (usb_vhci_is_control(wrk.work.urb.type)
 				        && !(wrk.work.urb.epadr & 0x7f)) {
 					handle_ep0_control(p, &ep0, &wrk.work.urb);
-				} else {
+				}
+                else {
 					struct avr_io_usb pkt =
 						{ wrk.work.urb.epadr, wrk.work.urb.buffer_actual,
 						        wrk.work.urb.buffer };
