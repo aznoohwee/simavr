@@ -31,9 +31,6 @@ objects := $(patsubst %.c,${OBJ}/%.o, $(wildcard *.c))
 # Unless the VHCI_USB env var is set, don't build this because it requires
 # a supporting library to be installed. See examples/extra_board_usb/README
 # for details on how to build it.
-ifndef VHCI_USB
-	objects := $(filter-out %vhci_usb.o, $(objects))
-endif
 
 #
 # Static library
