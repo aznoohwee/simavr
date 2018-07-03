@@ -32,6 +32,11 @@ static avr_cycle_count_t avr_spi_raise(struct avr_t * avr, avr_cycle_count_t whe
 			avr_raise_interrupt(avr, &p->spi);
 			avr_raise_irq(p->io.irq + SPI_IRQ_OUTPUT, avr->data[p->r_spdr]);
 		}
+        // in slave mode, bytes are sent but no interrupt is raised
+        // TODO check for state of SS line??
+        else {
+			avr_raise_irq(p->io.irq + SPI_IRQ_OUTPUT, avr->data[p->r_spdr]);
+        }
 	}
 	return 0;
 }
