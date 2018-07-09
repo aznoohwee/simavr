@@ -31,7 +31,7 @@
 /* TODO iso endpoint support */
 
 #include "vhci_usb.h"
-#include <libusb_vhci.h>
+#include "libusb_vhci.h"
 
 #include <pthread.h>
 #include <string.h>
@@ -172,11 +172,10 @@ control_write(
 
 static void
 handle_status_change(
-        struct vhci_usb_t *p,
-        struct usb_vhci_port_stat *prev,
-        struct usb_vhci_port_stat *curr)
+        struct vhci_usb_t * p,
+        struct usb_vhci_port_stat*prev,
+        struct usb_vhci_port_stat*curr)
 {
-
 	if (~prev->status & USB_VHCI_PORT_STAT_POWER
 	        && curr->status & USB_VHCI_PORT_STAT_POWER) {
 		avr_ioctl(p->avr, AVR_IOCTL_USB_VBUS, (void*) 1);
@@ -211,7 +210,6 @@ handle_status_change(
 	        && curr->flags & USB_VHCI_PORT_STAT_FLAG_RESUMING) {
 		printf("port resuming\n");
 		if (curr->status & USB_VHCI_PORT_STAT_CONNECTION) {
-
 			printf("  completing\n");
 			if (usb_vhci_port_resumed(p->fd, 1) < 0) {
 				perror("resumed");
@@ -221,7 +219,7 @@ handle_status_change(
 	}
 	if (~prev->status & USB_VHCI_PORT_STAT_SUSPEND
 	        && curr->status & USB_VHCI_PORT_STAT_SUSPEND)
-		printf("port suspending\n");
+		printf("port suspedning\n");
 	if (prev->status & USB_VHCI_PORT_STAT_ENABLE
 	        && ~curr->status & USB_VHCI_PORT_STAT_ENABLE)
 		printf("port disabled\n");
@@ -262,7 +260,7 @@ handle_ep0_control(
 				res=0;
 			}
 	}
-	else {
+	else
 		res = control_write(p,ep0,
 			urb->bmRequestType,
 			urb->bRequest,
@@ -270,14 +268,11 @@ handle_ep0_control(
 			urb->wIndex,
 			urb->wLength,
 			urb->buffer);
-    }
 
-	if (res==AVR_IOCTL_USB_STALL) {
+	if (res==AVR_IOCTL_USB_STALL)
 		urb->status = USB_VHCI_STATUS_STALL;
-    }
-	else {
+	else
 		urb->status = USB_VHCI_STATUS_SUCCESS;
-    }
 }
 
 static void *
@@ -287,12 +282,9 @@ vhci_usb_thread(
 	struct vhci_usb_t * p = (struct vhci_usb_t*) param;
 	struct _ep ep0 =
 		{ 0, 0 };
-
-	struct usb_vhci_port_stat port_status; /* contains the status of the port */
+	struct usb_vhci_port_stat port_status;
 	int id, busnum;
 	char*busid;
-
-    /* open the usb_vhci driver */
 	p->fd = usb_vhci_open(1, &id, &busnum, &busid);
 
 	if (p->fd < 0) {
@@ -300,7 +292,6 @@ vhci_usb_thread(
 		printf("driver loaded, and access bits ok?\n");
 		abort();
 	}
-
 	printf("Created virtual usb host with 1 port at %s (bus# %d)\n", busid,
 	        busnum);
 	memset(&port_status, 0, sizeof port_status);
@@ -309,6 +300,7 @@ vhci_usb_thread(
 
 	for (unsigned cycle = 0;; cycle++) {
 		struct usb_vhci_work wrk;
+
 		int res = usb_vhci_fetch_work(p->fd, &wrk);
 
 		if (p->attached != avrattached) {
@@ -335,26 +327,20 @@ vhci_usb_thread(
 
 		switch (wrk.type) {
 			case USB_VHCI_WORK_TYPE_PORT_STAT:
-                {
-                    handle_status_change(p, &port_status, &wrk.work.port_stat);
-                }
+				handle_status_change(p, &port_status, &wrk.work.port_stat);
 				break;
-
 			case USB_VHCI_WORK_TYPE_PROCESS_URB:
-				if (!ep0.epsz) {
+				if (!ep0.epsz)
 					ep0.epsz = get_ep0_size(p);
-                }
 
-				wrk.work.urb.buffer = NULL;
-				wrk.work.urb.iso_packets = NULL;
-
-				if (wrk.work.urb.buffer_length) {
+				wrk.work.urb.buffer = 0;
+				wrk.work.urb.iso_packets = 0;
+				if (wrk.work.urb.buffer_length)
 					wrk.work.urb.buffer = malloc(wrk.work.urb.buffer_length);
-                }
-				if (wrk.work.urb.packet_count) {
+				if (wrk.work.urb.packet_count)
 					wrk.work.urb.iso_packets = malloc(
-					        wrk.work.urb.packet_count * sizeof(struct usb_vhci_iso_packet));
-                }
+					        wrk.work.urb.packet_count
+					                * sizeof(struct usb_vhci_iso_packet));
 				if (res) {
 					if (usb_vhci_fetch_data(p->fd, &wrk.work.urb) < 0) {
 						if (errno != ECANCELED)
@@ -369,8 +355,8 @@ vhci_usb_thread(
 				if (usb_vhci_is_control(wrk.work.urb.type)
 				        && !(wrk.work.urb.epadr & 0x7f)) {
 					handle_ep0_control(p, &ep0, &wrk.work.urb);
-				}
-                else {
+
+				} else {
 					struct avr_io_usb pkt =
 						{ wrk.work.urb.epadr, wrk.work.urb.buffer_actual,
 						        wrk.work.urb.buffer };
